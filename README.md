@@ -24,9 +24,9 @@ $ npm run start
 
 Prioritized order matters. Accounts might get shadowbanned so test batches first to see if we can even get that far. Don't code features if we won't be able to use them.
 
-1. [ ] Ability to auto-lurk, browsing through Reddit into a random post and scroll through comments, then continue browsing
+1. [x] Ability to auto-lurk, browsing through Reddit into a random post and scroll through comments, then continue browsing
 2. [x] Ability to comment on a random post from homefeed
-3. [ ] Ability to comment on a specific post
+3. [x] Ability to comment on a specific post
 4. [ ] Ability to follow a list of subreddits
 5. [ ] Migrate script to APIfy Cloud with input args so that we can automate this for many accounts
 6. [ ] Log the IP address used in each workflow
