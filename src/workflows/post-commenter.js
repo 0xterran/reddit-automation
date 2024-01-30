@@ -2,7 +2,12 @@
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const axios = require("axios");
+const chromium = require("@sparticuz/chromium");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const {
+  retrieveFromAirtable,
+  saveCookiesToAirtable,
+} = require("../api/airtable");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -62,100 +67,110 @@ function matchesSubRedditPattern(href) {
   return match;
 }
 
-// Launch pupputeer-stealth
-puppeteer
-  .launch({
-    headless: false,
-    devtools: true,
-    args: [
-      `--proxy-server=${profile.proxy.server}:${profile.proxy.port}`,
-      `--proxy-auth=${profile.proxy.username}:${profile.proxy.password}`,
-    ],
-  })
-  .then(async (browser) => {
-    // Create a new page
-    const page = await browser.newPage();
-    await page.authenticate({
-      username: profile.proxy.username,
-      password: profile.proxy.password,
-    });
-
-    const url =
-      "https://www.reddit.com/r/InstagramMarketing/comments/1ae635m/anyone_experiencing_very_poor_engagementviews/";
-    // allow clipboard access
-    const context = browser.defaultBrowserContext();
-    await context.overridePermissions(url, [
-      "clipboard-read",
-      "clipboard-write",
-    ]);
-    // use ghost cursor
-    const cursor = createCursor(page);
-    await page.setViewport({ width: 1280, height: 720 });
-    await page.waitForTimeout(1000);
-    // load cookies
-    const cookieFilesPath = `src/profiles/P001/cookies-P001.json`;
-    let alreadyLoggedIn = false;
-    const setupCookies = async () => {
-      if (fs.existsSync(cookieFilesPath)) {
-        const cookies = JSON.parse(fs.readFileSync(cookieFilesPath, "utf-8"));
-        await page.setCookie(...cookies);
-        console.log("Loaded cookies: ", cookies.length, " found");
-        alreadyLoggedIn = cookies.some(
-          (cookie) => cookie.name === "reddit_session"
-        );
-      } else {
-        console.log("Cookie file does not exist:", cookieFilesPath);
-      }
+const run = async ({ isCloud, inputArgs }) => {
+  const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
+  const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
+    profile.proxy.split(":");
+  const profileCookies = JSON.parse(profile.cookies);
+  const p = new Promise(async (res, rej) => {
+    // Launch pupputeer-stealth
+    const config = {
+      headless: isCloud,
+      devtools: false,
+      args: [
+        `--proxy-server=${proxyServer}:${proxyPort}`,
+        `--proxy-auth=${proxyUsername}:${proxyPassword}`,
+      ],
     };
-    await setupCookies();
-    // begin the workflow
-    // Go to the website
-    await page.goto(url);
-    await page.waitForTimeout(2000);
-    // login if needed
-    const loginFlow = async () => {
-      await cursor.click("a#login-button");
-      await page.waitForTimeout(1000);
-
-      // Types slower, like a user
-      await page.type("#login-username", profile.username, {
-        delay: 100,
-      });
-      await page.type("#login-password", profile.password, {
-        delay: 250,
-      });
-      await page.waitForTimeout(500);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(10000);
-    };
-    if (!alreadyLoggedIn) {
-      await loginFlow();
+    if (isCloud) {
+      config.defaultViewport = chromium.defaultViewport;
+      config.executablePath = await chromium.executablePath();
+      config.args = chromium.args;
     }
+    puppeteer.launch(config).then(async (browser) => {
+      // Create a new page
+      const page = await browser.newPage();
+      await page.authenticate({
+        username: proxyUsername,
+        password: proxyPassword,
+      });
 
-    // Post a comment
-    const postComment = async () => {
-      // Extract the title text
-      const title = await page
-        .$eval(
-          'div[data-test-id="post-content"] h1',
-          (h1) => (h1 ? h1.textContent : ""),
-          "" // Default to empty string if the element is not found
-        )
-        .catch(() => ""); // Using .catch to handle the case where the element is not found
+      const url =
+        "https://www.reddit.com/r/InstagramMarketing/comments/1ae635m/anyone_experiencing_very_poor_engagementviews/";
+      // allow clipboard access
+      const context = browser.defaultBrowserContext();
+      await context.overridePermissions(url, [
+        "clipboard-read",
+        "clipboard-write",
+      ]);
+      // use ghost cursor
+      const cursor = createCursor(page);
+      await page.setViewport({ width: 1280, height: 720 });
+      await page.waitForTimeout(1000);
+      // load cookies
 
-      // Extract the paragraph texts
-      const paragraphs = await page
-        .$$eval('div[data-test-id="post-content"] .RichTextJSON-root p', (ps) =>
-          ps.length > 0 ? ps.map((p) => p.textContent) : [""]
-        )
-        .catch(() => []); // If no paragraphs are found, return an empty array
+      let alreadyLoggedIn = false;
+      const setupCookies = async () => {
+        if (profileCookies && profileCookies.length > 0) {
+          console.log("Loaded cookies: ", profileCookies.length, " found");
+          await page.setCookie(...profileCookies);
+          alreadyLoggedIn = profileCookies.some(
+            (cookie) => cookie.name === "reddit_session"
+          );
+        } else {
+          console.log("Cookies empty");
+        }
+      };
+      await setupCookies();
+      // begin the workflow
+      // Go to the website
+      await page.goto(url);
+      await page.waitForTimeout(2000);
+      // login if needed
+      const loginFlow = async () => {
+        await cursor.click("a#login-button");
+        await page.waitForTimeout(1000);
 
-      console.log("Title:", title);
-      console.log("Paragraphs:", paragraphs);
+        // Types slower, like a user
+        await page.type("#login-username", profile.username, {
+          delay: 100,
+        });
+        await page.type("#login-password", profile.password, {
+          delay: 250,
+        });
+        await page.waitForTimeout(500);
+        await page.keyboard.press("Enter");
+        await page.waitForTimeout(10000);
+      };
+      if (!alreadyLoggedIn) {
+        await loginFlow();
+      }
 
-      const user_style_prompt =
-        "Write a reddit comment that responds to the post casually without sounding like a bot, and with redditor energy/personality. Even a bit of criticism is good but not all the time. Try not to talk about them too much, talk more about yourself almost like on a high horse. Keep it relatively short under 20 words.";
-      const prompt = `
+      // Post a comment
+      const postComment = async () => {
+        // Extract the title text
+        const title = await page
+          .$eval(
+            'div[data-test-id="post-content"] h1',
+            (h1) => (h1 ? h1.textContent : ""),
+            "" // Default to empty string if the element is not found
+          )
+          .catch(() => ""); // Using .catch to handle the case where the element is not found
+
+        // Extract the paragraph texts
+        const paragraphs = await page
+          .$$eval(
+            'div[data-test-id="post-content"] .RichTextJSON-root p',
+            (ps) => (ps.length > 0 ? ps.map((p) => p.textContent) : [""])
+          )
+          .catch(() => []); // If no paragraphs are found, return an empty array
+
+        console.log("Title:", title);
+        console.log("Paragraphs:", paragraphs);
+
+        const user_style_prompt =
+          "Write a reddit comment that responds to the post casually without sounding like a bot, and with redditor energy/personality. Even a bit of criticism is good but not all the time. Try not to talk about them too much, talk more about yourself almost like on a high horse. Keep it relatively short under 20 words.";
+        const prompt = `
       You are a commentator on reddit posts.
       Write a single comment/reply for the given post.
       You will also get a user defined style prompt, for you to write your single comment/reply in their desired style. Please adjust to the users preference.
@@ -174,133 +189,176 @@ puppeteer
       Title: ${title}
       Post: ${paragraphs.join("\n")}
       `;
-      console.log(prompt);
-      console.log("------------------");
-      let generatedComment = "";
-      try {
-        const result = await model.generateContent([prompt]);
-        const response = await result.response;
-        generatedComment = response.text();
-      } catch (e) {
-        console.log(e);
-        console.log(e.message);
-        generatedComment = "Blocked due to safety";
-      }
-      console.log("Generated comment:", generatedComment);
-      if (generatedComment === "Blocked due to safety") {
-        console.log("Generated comment was blocked due to safety. Exiting...");
-        throw new Error("Generated comment was blocked due to safety.");
-      }
+        console.log(prompt);
+        console.log("------------------");
+        let generatedComment = "";
+        try {
+          const result = await model.generateContent([prompt]);
+          const response = await result.response;
+          generatedComment = response.text();
+        } catch (e) {
+          console.log(e);
+          console.log(e.message);
+          generatedComment = "Blocked due to safety";
+        }
+        console.log("Generated comment:", generatedComment);
+        if (generatedComment === "Blocked due to safety") {
+          console.log(
+            "Generated comment was blocked due to safety. Exiting..."
+          );
+          throw new Error("Generated comment was blocked due to safety.");
+        }
 
-      // Get the text input
-      const inputTextSelector =
-        'div[data-test-id="comment-submission-form-richtext"] div[contenteditable="true"]';
-      await page.waitForSelector(inputTextSelector);
-      await cursor.click(inputTextSelector);
-      await page.type(
-        'div[data-test-id="comment-submission-form-richtext"] div[contenteditable="true"]',
-        generatedComment,
-        { delay: 250 }
-      );
+        // Get the text input
+        const inputTextSelector =
+          'div[data-test-id="comment-submission-form-richtext"] div[contenteditable="true"]';
+        await page.waitForSelector(inputTextSelector);
+        await cursor.click(inputTextSelector);
+        await page.type(
+          'div[data-test-id="comment-submission-form-richtext"] div[contenteditable="true"]',
+          generatedComment,
+          { delay: 250 }
+        );
 
-      await page.waitForTimeout(1000);
-      // XPath expression to find the button
-      const buttonXPath =
-        "//button[contains(text(), 'Comment')][@type='submit']";
-      await page.waitForXPath(buttonXPath);
-      const commentButtons = await page.$x(buttonXPath);
+        await page.waitForTimeout(1000);
+        // XPath expression to find the button
+        const buttonXPath =
+          "//button[contains(text(), 'Comment')][@type='submit']";
+        await page.waitForXPath(buttonXPath);
+        const commentButtons = await page.$x(buttonXPath);
 
-      if (commentButtons.length > 0) {
-        const commentButton = commentButtons[0];
-        await commentButton.click();
-      } else {
-        // Handle the case where the button is not found
-        console.log("Comment button not found");
-      }
+        if (commentButtons.length > 0) {
+          const commentButton = commentButtons[0];
+          await commentButton.click();
+        } else {
+          // Handle the case where the button is not found
+          console.log("Comment button not found");
+        }
 
-      await page.waitForTimeout(3000);
+        await page.waitForTimeout(3000);
 
-      // Get the posted comment's permalink
-      const permalink = await page.evaluate((targetUsername) => {
-        return new Promise((resolve, reject) => {
-          let permalinkUrl = "";
+        // Get the posted comment's permalink
+        const permalink = await page.evaluate((targetUsername) => {
+          return new Promise((resolve, reject) => {
+            let permalinkUrl = "";
 
-          const comments = Array.from(document.querySelectorAll("div.Comment"));
-
-          for (const comment of comments) {
-            const usernameLink = comment.querySelector(
-              `a[href*="/user/${targetUsername}/"]`
+            const comments = Array.from(
+              document.querySelectorAll("div.Comment")
             );
-            if (usernameLink) {
-              const buttons = comment.querySelectorAll("button");
-              const shareButton = Array.from(buttons).find((button) =>
-                button.textContent.includes("Share")
+
+            for (const comment of comments) {
+              const usernameLink = comment.querySelector(
+                `a[href*="/user/${targetUsername}/"]`
               );
+              if (usernameLink) {
+                const buttons = comment.querySelectorAll("button");
+                const shareButton = Array.from(buttons).find((button) =>
+                  button.textContent.includes("Share")
+                );
 
-              if (shareButton) {
-                console.log('Found "Share" button:', shareButton);
-                shareButton.click();
+                if (shareButton) {
+                  console.log('Found "Share" button:', shareButton);
+                  shareButton.click();
 
-                setTimeout(() => {
-                  // Use the class and role to narrow down the "Copy Link" button and verify its text content
-                  const copyLinkButtonCandidates = Array.from(
-                    document.querySelectorAll('button[role="menuitem"]')
-                  );
-                  const copyLinkButton = copyLinkButtonCandidates.find(
-                    (button) =>
-                      Array.from(button.querySelectorAll("span")).some(
-                        (span) => span.textContent === "Copy link"
-                      )
-                  );
+                  setTimeout(() => {
+                    // Use the class and role to narrow down the "Copy Link" button and verify its text content
+                    const copyLinkButtonCandidates = Array.from(
+                      document.querySelectorAll('button[role="menuitem"]')
+                    );
+                    const copyLinkButton = copyLinkButtonCandidates.find(
+                      (button) =>
+                        Array.from(button.querySelectorAll("span")).some(
+                          (span) => span.textContent === "Copy link"
+                        )
+                    );
 
-                  if (copyLinkButton) {
-                    console.log('Found "Copy Link" button:', copyLinkButton);
-                    copyLinkButton.click();
-                    setTimeout(async () => {
-                      const clipboardText =
-                        await navigator.clipboard.readText();
-                      console.log("clipboardText:", clipboardText);
-                      permalinkUrl = clipboardText;
-                      resolve(permalinkUrl);
-                    }, 1000);
-                  } else {
-                    console.log('No "Copy Link" button found.');
-                  }
-                }, 1000); // Wait for 1 second for the "Copy Link" button to become visible after clicking "Share"
-                break; // Exit the loop since the target share button has been interacted with
+                    if (copyLinkButton) {
+                      console.log('Found "Copy Link" button:', copyLinkButton);
+                      copyLinkButton.click();
+                      setTimeout(async () => {
+                        const clipboardText =
+                          await navigator.clipboard.readText();
+                        console.log("clipboardText:", clipboardText);
+                        permalinkUrl = clipboardText;
+                        resolve(permalinkUrl);
+                      }, 1000);
+                    } else {
+                      console.log('No "Copy Link" button found.');
+                    }
+                  }, 1000); // Wait for 1 second for the "Copy Link" button to become visible after clicking "Share"
+                  break; // Exit the loop since the target share button has been interacted with
+                }
               }
             }
-          }
-        });
-      }, profile.username);
-      return { permalink, generatedComment };
-    };
-    const { permalink, generatedComment } = await postComment();
+          });
+        }, profile.username);
+        return { permalink, generatedComment };
+      };
+      const { permalink, generatedComment } = await postComment();
 
-    console.log(`Commented! Heres the permalink to the comment: ${permalink}`);
-
-    const logPayload = {
-      username: profile.username,
-      action: "comment_post",
-      comment: generatedComment,
-      permalink: permalink,
-      timestamp: new Date().toISOString(),
-    };
-
-    try {
-      await axios.post(loggingWebhook, logPayload);
-    } catch (error) {
-      console.error("Error sending log:", error);
-    }
-
-    const updateCookies = async () => {
-      await page.waitForTimeout(2000);
-      const updatedCookies = await page.cookies();
-      fs.writeFileSync(
-        cookieFilesPath,
-        JSON.stringify(updatedCookies, null, 2)
+      console.log(
+        `Commented! Heres the permalink to the comment: ${permalink}`
       );
-    };
-    await updateCookies();
-    await browser.close();
+
+      const logPayload = {
+        username: profile.username,
+        action: "comment_post",
+        comment: generatedComment,
+        permalink: permalink,
+        timestamp: new Date().toISOString(),
+      };
+
+      try {
+        await axios.post(loggingWebhook, logPayload);
+      } catch (error) {
+        console.error("Error sending log:", error);
+      }
+
+      const updateCookies = async () => {
+        await page.waitForTimeout(2000);
+        const updatedCookies = await page.cookies();
+        await saveCookiesToAirtable({
+          recordID: inputArgs.recordID,
+          cookiesArray: updatedCookies,
+        });
+      };
+      await updateCookies();
+      await browser.close();
+      res();
+    });
   });
+  return p;
+};
+// run locally
+// run({
+//   isCloud: false,
+//   inputArgs: {
+//     recordID: "recl9EyGvU4ASC1V0",
+//   },
+// });
+
+// run in the cloud
+exports.handler = async (event) => {
+  console.log(`Starting post-commenter.js workflow`);
+  console.log(`Received event: ${JSON.stringify(event)}`);
+  // Parse the JSON body from the event
+  let body;
+  try {
+    body = JSON.parse(event.body);
+  } catch (e) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "Invalid JSON" }),
+    };
+  }
+  // Access the arguments
+  const inputArgs = {
+    recordID: body.recordID || "",
+  };
+  if (!inputArgs.recordID) {
+    console.log(`No Airtable recordID found, aborting...`);
+    return;
+  }
+  console.log(`Got input args:`, inputArgs);
+  await run({ isCloud: true, inputArgs });
+};

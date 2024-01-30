@@ -2,7 +2,12 @@
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const axios = require("axios");
+const chromium = require("@sparticuz/chromium");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const {
+  retrieveFromAirtable,
+  saveCookiesToAirtable,
+} = require("../api/airtable");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -13,37 +18,9 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 // Add stealth plugin and use defaults
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const RecaptchaPlugin = require("puppeteer-extra-plugin-recaptcha");
-const { scrollPageToBottom } = require("puppeteer-autoscroll-down");
 const { createCursor } = require("ghost-cursor");
 
 const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
-
-const profile = {
-  name: "Sarah Van Robin",
-  backstory: `
-Grew up: Los Angeles, California
-School: University of California, Berkeley
-Studied: Computer Science
-Currently Lives: San Francisco, California
-Hobbies: Surfing and podcasting
-Marital Status: Single
-Social Justice Cause: Environmental conservation
-Pet Peeves: Unpunctuality and inefficiency
-Myers-Briggs: ENTP
-Birthday: March 12
-Main Job: Software Engineer at a tech startup
-Side Gig: Zapier Consultant
-  `,
-  username: "frontorange94",
-  password: "TwtbUFVp6PPCpbi",
-  proxy: {
-    server: "portal-na.anyip.io",
-    port: "1080",
-    username:
-      "user_bafb00,type_residential,country_US,lat_31.968599,lon_-99.901813,session_23b147e1",
-    password: "password",
-  },
-};
 
 // Use stealth
 puppeteer.use(StealthPlugin());
@@ -55,71 +32,123 @@ puppeteer.use(
   })
 );
 
-function matchesSubRedditPattern(href) {
-  const pattern = /\/r\/[^\/]+\/comments\/[^\/]+/;
-  const match = pattern.test(href);
-  console.log(`Found match = ${match} for ${href}`);
-  return match;
-}
+const run = async ({ isCloud, inputArgs }) => {
+  const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
+  const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
+    profile.proxy.split(":");
+  const profileCookies = JSON.parse(profile.cookies);
+  const p = new Promise(async (res, rej) => {
+    const config = {
+      headless: isCloud,
+      devtools: false,
+      args: [
+        `--proxy-server=${proxyServer}:${proxyPort}`,
+        `--proxy-auth=${proxyUsername}:${proxyPassword}`,
+      ],
+    };
+    if (isCloud) {
+      config.defaultViewport = chromium.defaultViewport;
+      config.executablePath = await chromium.executablePath();
+      config.args = chromium.args;
+    }
+    // Launch pupputeer-stealth
+    puppeteer.launch(config).then(async (browser) => {
+      // Create a new page
+      const page = await browser.newPage();
 
-// Launch pupputeer-stealth
-puppeteer
-  .launch({
-    headless: false,
-    devtools: true,
-    args: [
-      `--proxy-server=${profile.proxy.server}:${profile.proxy.port}`,
-      `--proxy-auth=${profile.proxy.username}:${profile.proxy.password}`,
-    ],
-  })
-  .then(async (browser) => {
-    // Create a new page
-    const page = await browser.newPage();
+      await page.authenticate({
+        username: proxyUsername,
+        password: proxyPassword,
+      });
 
-    await page.authenticate({
-      username: profile.proxy.username,
-      password: profile.proxy.password,
-    });
+      const url = "https://www.reddit.com";
+      // allow clipboard access
+      const context = browser.defaultBrowserContext();
+      await context.overridePermissions(url, [
+        "clipboard-read",
+        "clipboard-write",
+      ]);
+      // use ghost cursor
+      const cursor = createCursor(page);
+      await page.setViewport({ width: 1280, height: 720 });
+      await page.waitForTimeout(1000);
+      // load cookies
+      let alreadyLoggedIn = false;
+      const setupCookies = async () => {
+        if (profileCookies && profileCookies.length > 0) {
+          console.log("Loaded cookies: ", profileCookies.length, " found");
+          await page.setCookie(...profileCookies);
+          alreadyLoggedIn = profileCookies.some(
+            (cookie) => cookie.name === "reddit_session"
+          );
+        } else {
+          console.log("Cookies empty");
+        }
+      };
+      await setupCookies();
+      // Go to the website
+      await page.goto(url);
+      await page.waitForTimeout(5000);
 
-    const url = "https://www.reddit.com";
-    // allow clipboard access
-    const context = browser.defaultBrowserContext();
-    await context.overridePermissions(url, [
-      "clipboard-read",
-      "clipboard-write",
-    ]);
-    // use ghost cursor
-    const cursor = createCursor(page);
-    await page.setViewport({ width: 1280, height: 720 });
-    await page.waitForTimeout(1000);
-    // load cookies
-    const cookieFilesPath = `src/profiles/P001/cookies-P001.json`;
-    let alreadyLoggedIn = false;
-    const setupCookies = async () => {
-      if (fs.existsSync(cookieFilesPath)) {
-        const cookies = JSON.parse(fs.readFileSync(cookieFilesPath, "utf-8"));
-        await page.setCookie(...cookies);
-        console.log("Loaded cookies: ", cookies.length, " found");
-        alreadyLoggedIn = cookies.some(
-          (cookie) => cookie.name === "reddit_session"
-        );
-      } else {
-        console.log("Cookie file does not exist:", cookieFilesPath);
+      // log it
+      const page_url = page.url();
+      const logPayload = {
+        username: profile.username,
+        action: "demo_puppeteer",
+        url: page_url,
+        timestamp: new Date().toISOString(),
+      };
+      try {
+        await axios.post(loggingWebhook, logPayload);
+      } catch (error) {
+        console.error("Error sending log:", error);
       }
-    };
-    await setupCookies();
-    // Go to the website
-    await page.goto(url);
-    await page.waitForTimeout(60000);
 
-    const updateCookies = async () => {
-      await page.waitForTimeout(2000);
-      const updatedCookies = await page.cookies();
-      fs.writeFileSync(
-        cookieFilesPath,
-        JSON.stringify(updatedCookies, null, 2)
-      );
-    };
-    await updateCookies();
-    // await browser.close();
+      const updateCookies = async () => {
+        await page.waitForTimeout(2000);
+        const updatedCookies = await page.cookies();
+        await saveCookiesToAirtable({
+          recordID: inputArgs.recordID,
+          cookiesArray: updatedCookies,
+        });
+      };
+      await updateCookies();
+      await browser.close();
+      res();
+    });
   });
+  return p;
+};
+// run locally
+// run({
+//   isCloud: false,
+//   inputArgs: {
+//     recordID: "recl9EyGvU4ASC1V0",
+//   },
+// });
+
+// run in the cloud
+exports.handler = async (event) => {
+  console.log(`Starting demo.js workflow`);
+  console.log(`Received event: ${JSON.stringify(event)}`);
+  // Parse the JSON body from the event
+  let body;
+  try {
+    body = JSON.parse(event.body);
+  } catch (e) {
+    return {
+      statusCode: 400,
+      body: JSON.stringify({ message: "Invalid JSON" }),
+    };
+  }
+  // Access the arguments
+  const inputArgs = {
+    recordID: body.recordID || "",
+  };
+  if (!inputArgs.recordID) {
+    console.log(`No Airtable recordID found, aborting...`);
+    return;
+  }
+  console.log(`Got input args:`, inputArgs);
+  await run({ isCloud: true, inputArgs });
+};

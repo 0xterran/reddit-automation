@@ -1,0 +1,23 @@
+service: reddit-autobots
+
+provider:
+  name: aws
+  region: us-east-1
+  runtime: nodejs18.x
+
+functions:
+  demoPuppeteer:
+    handler: src/workflows/demo.handler
+    timeout: 300
+  feedLurker:
+    handler: src/workflows/homefeed-lurker.handler
+    timeout: 300
+  feedCommenter:
+    handler: src/workflows/homefeed-commenter.handler
+    timeout: 300
+  postCommenter:
+    handler: src/workflows/post-commenter.handler
+    timeout: 300
+  subredditsFollow:
+    handler: src/workflows/subreddits-follow.handler
+    timeout: 300
