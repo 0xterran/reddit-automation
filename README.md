@@ -28,13 +28,14 @@ Prioritized order matters. Accounts might get shadowbanned so test batches first
 2. [x] Ability to comment on a random post from homefeed
 3. [x] Ability to comment on a specific post
 4. [x] Ability to follow a list of subreddits
-5. [ ] Migrate script to APIfy Cloud with input args so that we can automate this for many accounts
-6. [ ] Log the IP address used in each workflow
-7. [ ] Orchestrate the warmup
-8. [ ] Ability to set a subreddit to scroll in instead of the homepage
-9. [ ] Ability to upvote downvote
-10. [ ] Ability to post to Reddit
-11. [ ] Ability to respond to comment replies
+5. [x] Migrate script to AWS Lambda with input args so that we can automate this for many accounts
+6. [ ] Fix the lambdas to get the args passed in from POST request
+7. [ ] Log the IP address used in each workflow
+8. [ ] Orchestrate the warmup
+9. [ ] Ability to set a subreddit to scroll in instead of the homepage
+10. [ ] Ability to upvote downvote
+11. [ ] Ability to post to Reddit
+12. [ ] Ability to respond to comment replies
 
 ## Testing Process
 

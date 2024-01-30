@@ -23,33 +23,6 @@ const { createCursor } = require("ghost-cursor");
 
 const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
 
-const profile = {
-  name: "Sarah Van Robin",
-  backstory: `
-Grew up: Los Angeles, California
-School: University of California, Berkeley
-Studied: Computer Science
-Currently Lives: San Francisco, California
-Hobbies: Surfing and podcasting
-Marital Status: Single
-Social Justice Cause: Environmental conservation
-Pet Peeves: Unpunctuality and inefficiency
-Myers-Briggs: ENTP
-Birthday: March 12
-Main Job: Software Engineer at a tech startup
-Side Gig: Zapier Consultant
-  `,
-  username: "frontorange94",
-  password: "TwtbUFVp6PPCpbi",
-  proxy: {
-    server: "portal-na.anyip.io",
-    port: "1080",
-    username:
-      "user_bafb00,type_residential,country_US,lat_31.968599,lon_-99.901813,session_23b147e1",
-    password: "password",
-  },
-};
-
 // Use stealth
 puppeteer.use(StealthPlugin());
 
