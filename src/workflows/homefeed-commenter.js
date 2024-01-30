@@ -1,4 +1,4 @@
-// $ node src/puppeteer.js
+// $ node src/workflows/homefeed-commenter.js
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const axios = require("axios");
@@ -344,6 +344,7 @@ puppeteer.launch({ headless: false, devtools: true }).then(async (browser) => {
 
   const logPayload = {
     username: profile.username,
+    action: "comment_post",
     comment: generatedComment,
     permalink: permalink,
     timestamp: new Date().toISOString(),
