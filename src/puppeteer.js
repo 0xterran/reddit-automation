@@ -2,6 +2,13 @@
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const axios = require("axios");
+const { GoogleGenerativeAI } = require("@google/generative-ai");
+
+const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
+
+// Access your API key as an environment variable (see "Set up your API key" above)
+const genAI = new GoogleGenerativeAI(gemini_api_key);
+const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 
 // Add stealth plugin and use defaults
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
@@ -27,8 +34,8 @@ Birthday: March 12
 Main Job: Software Engineer at a tech startup
 Side Gig: Zapier Consultant
   `,
-  username: "ptarmiganamethystLam",
-  password: "eT9YKAXMo8TpUys",
+  username: "frontorange94",
+  password: "TwtbUFVp6PPCpbi",
 };
 
 // Use stealth
@@ -207,6 +214,45 @@ puppeteer.launch({ headless: false, devtools: true }).then(async (browser) => {
     console.log("Title:", title);
     console.log("Paragraphs:", paragraphs);
 
+    const user_style_prompt =
+      "Write a reddit comment that responds to the post casually without sounding like a bot, and with redditor energy/personality. Even a bit of criticism is good but not all the time. Try not to talk about them too much, talk more about yourself almost like on a high horse. Keep it relatively short under 20 words.";
+    const prompt = `
+    You are a commentator on reddit posts.
+    Write a single comment/reply for the given post.
+    You will also get a user defined style prompt, for you to write your single comment/reply in their desired style. Please adjust to the users preference.
+    
+    Here is the users style prompt: 
+    -- start of user style prompt --
+    ${user_style_prompt}
+    -- end of user style prompt --
+
+    Please provide only your best one option for comment/reply. 
+    Feel free to comply with your safety alignment or requirements.
+    You do NOT need to provide real-time or current news updates or verify the content of the image. Just generate a single response.
+    Straightforward answer without any additional embellishments or explanations.
+
+    Here is the post information:
+    Title: ${title}
+    Post: ${paragraphs.join("\n")}
+    `;
+    console.log(prompt);
+    console.log("------------------");
+    let generatedComment = "";
+    try {
+      const result = await model.generateContent([prompt]);
+      const response = await result.response;
+      generatedComment = response.text();
+    } catch (e) {
+      console.log(e);
+      console.log(e.message);
+      generatedComment = "Blocked due to safety";
+    }
+    console.log("Generated comment:", generatedComment);
+    if (generatedComment === "Blocked due to safety") {
+      console.log("Generated comment was blocked due to safety. Exiting...");
+      throw new Error("Generated comment was blocked due to safety.");
+    }
+
     // Get the text input
     const inputTextSelector =
       'div[data-test-id="comment-submission-form-richtext"] div[contenteditable="true"]';
@@ -214,16 +260,29 @@ puppeteer.launch({ headless: false, devtools: true }).then(async (browser) => {
     await cursor.click(inputTextSelector);
     await page.type(
       'div[data-test-id="comment-submission-form-richtext"] div[contenteditable="true"]',
-      "Here for the comments section 🍿",
+      generatedComment,
       { delay: 250 }
     );
 
+    await page.waitForTimeout(1000);
     // Wait for the submit button to be available
-    const commentButtonSelector = 'button[type="submit"]';
-    await page.waitForSelector(commentButtonSelector);
+    // const commentButtonSelector = 'button[type="submit"]';
+    // await page.waitForSelector(commentButtonSelector);
+    // await cursor.click(commentButtonSelector);
 
-    // Use ghost-cursor to click on the submit button
-    await cursor.click(commentButtonSelector);
+    // XPath expression to find the button
+    const buttonXPath = "//button[contains(text(), 'Comment')][@type='submit']";
+    await page.waitForXPath(buttonXPath);
+    const commentButtons = await page.$x(buttonXPath);
+
+    if (commentButtons.length > 0) {
+      const commentButton = commentButtons[0];
+      await commentButton.click();
+    } else {
+      // Handle the case where the button is not found
+      console.log("Comment button not found");
+    }
+
     await page.waitForTimeout(3000);
 
     // Get the posted comment's permalink
@@ -277,14 +336,15 @@ puppeteer.launch({ headless: false, devtools: true }).then(async (browser) => {
         }
       });
     }, profile.username);
-    return permalink;
+    return { permalink, generatedComment };
   };
-  const permalink = await readScrollCommentPost();
+  const { permalink, generatedComment } = await readScrollCommentPost();
 
   console.log(`Commented! Heres the permalink to the comment: ${permalink}`);
 
   const logPayload = {
     username: profile.username,
+    comment: generatedComment,
     permalink: permalink,
     timestamp: new Date().toISOString(),
   };
@@ -313,8 +373,6 @@ puppeteer.launch({ headless: false, devtools: true }).then(async (browser) => {
 
   // Wait for security check
   await page.waitForTimeout(5000);
-
-  console.log("Hello world");
 
   // // Solve reCAPTCHA challenges on the page
   // const recaptchaSolutions = await page.solveRecaptchas();
@@ -349,5 +407,5 @@ puppeteer.launch({ headless: false, devtools: true }).then(async (browser) => {
   // // print out the results
   // console.log(title, "\n", msg, "\n", state);
 
-  // await browser.close();
+  await browser.close();
 });
