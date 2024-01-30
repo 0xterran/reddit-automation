@@ -1,4 +1,4 @@
-// $ node src/workflows/subreddits-follow.js
+// $ node src/workflows/demo.js
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const axios = require("axios");
@@ -75,18 +75,16 @@ puppeteer
   .then(async (browser) => {
     // Create a new page
     const page = await browser.newPage();
+
     await page.authenticate({
       username: profile.proxy.username,
       password: profile.proxy.password,
     });
 
-    const urls = [
-      "https://www.reddit.com/r/webdev/",
-      "https://www.reddit.com/r/everymanshouldknow/",
-    ];
+    const url = "https://www.reddit.com";
     // allow clipboard access
     const context = browser.defaultBrowserContext();
-    await context.overridePermissions(urls[0], [
+    await context.overridePermissions(url, [
       "clipboard-read",
       "clipboard-write",
     ]);
@@ -94,11 +92,6 @@ puppeteer
     const cursor = createCursor(page);
     await page.setViewport({ width: 1280, height: 720 });
     await page.waitForTimeout(1000);
-    // begin the workflow
-    let threadsLurked = 0;
-    const getRandomInt = (min, max) => {
-      return Math.floor(Math.random() * (max - min + 1)) + min;
-    };
     // load cookies
     const cookieFilesPath = `src/profiles/P001/cookies-P001.json`;
     let alreadyLoggedIn = false;
@@ -115,59 +108,9 @@ puppeteer
       }
     };
     await setupCookies();
-    // login if needed
-    const loginFlow = async () => {
-      await cursor.click("a#login-button");
-      await page.waitForTimeout(1000);
-
-      // Types slower, like a user
-      await page.type("#login-username", profile.username, {
-        delay: 100,
-      });
-      await page.type("#login-password", profile.password, {
-        delay: 250,
-      });
-      await page.waitForTimeout(500);
-      await page.keyboard.press("Enter");
-      await page.waitForTimeout(10000);
-    };
-    if (!alreadyLoggedIn) {
-      await loginFlow();
-    }
-    // begin workflow
-    const followSubreddit = async (url) => {
-      // Go to the website
-      await page.goto(url);
-      await page.waitForTimeout(2000);
-      const buttonXPath = "//button[contains(text(), 'Join')][@role='button']";
-      await page.waitForXPath(buttonXPath);
-      const joinButtons = await page.$x(buttonXPath);
-      console.log("Found join buttons: ", joinButtons);
-      for (let joinButton of joinButtons) {
-        const buttonText = await joinButton.evaluate((el) => el.textContent);
-        console.log("Button text:", buttonText);
-      }
-      joinButtons[0].click();
-      const page_url = page.url();
-      const logPayload = {
-        username: profile.username,
-        action: "follow_subreddit",
-        url: page_url,
-        timestamp: new Date().toISOString(),
-      };
-      try {
-        await axios.post(loggingWebhook, logPayload);
-      } catch (error) {
-        console.error("Error sending log:", error);
-      }
-      await page.waitForTimeout(1000);
-    };
-    const runSequentially = async (urls) => {
-      for (let url of urls) {
-        await followSubreddit(url);
-      }
-    };
-    await runSequentially(urls);
+    // Go to the website
+    await page.goto(url);
+    await page.waitForTimeout(60000);
 
     const updateCookies = async () => {
       await page.waitForTimeout(2000);
@@ -178,5 +121,5 @@ puppeteer
       );
     };
     await updateCookies();
-    await browser.close();
+    // await browser.close();
   });

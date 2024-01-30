@@ -30,10 +30,11 @@ Prioritized order matters. Accounts might get shadowbanned so test batches first
 4. [x] Ability to follow a list of subreddits
 5. [ ] Migrate script to APIfy Cloud with input args so that we can automate this for many accounts
 6. [ ] Log the IP address used in each workflow
-6. [ ] Ability to set a subreddit to scroll in instead of the homepage
-7. [ ] Ability to upvote downvote
-8. [ ] Ability to post to Reddit
-9. [ ] Ability to respond to comment replies
+7. [ ] Orchestrate the warmup
+8. [ ] Ability to set a subreddit to scroll in instead of the homepage
+9. [ ] Ability to upvote downvote
+10. [ ] Ability to post to Reddit
+11. [ ] Ability to respond to comment replies
 
 ## Testing Process
 
