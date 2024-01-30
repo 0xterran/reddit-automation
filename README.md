@@ -29,6 +29,7 @@ Prioritized order matters. Accounts might get shadowbanned so test batches first
 3. [ ] Ability to comment on a specific post
 4. [ ] Ability to follow a list of subreddits
 5. [ ] Migrate script to APIfy Cloud with input args so that we can automate this for many accounts
+6. [ ] Log the IP address used in each workflow
 6. [ ] Ability to set a subreddit to scroll in instead of the homepage
 7. [ ] Ability to upvote downvote
 8. [ ] Ability to post to Reddit
