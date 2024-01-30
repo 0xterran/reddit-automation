@@ -27,7 +27,7 @@ Prioritized order matters. Accounts might get shadowbanned so test batches first
 1. [x] Ability to auto-lurk, browsing through Reddit into a random post and scroll through comments, then continue browsing
 2. [x] Ability to comment on a random post from homefeed
 3. [x] Ability to comment on a specific post
-4. [ ] Ability to follow a list of subreddits
+4. [x] Ability to follow a list of subreddits
 5. [ ] Migrate script to APIfy Cloud with input args so that we can automate this for many accounts
 6. [ ] Log the IP address used in each workflow
 6. [ ] Ability to set a subreddit to scroll in instead of the homepage
