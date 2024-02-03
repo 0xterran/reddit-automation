@@ -1,13 +1,17 @@
-// $ node src/workflows/homefeed-lurker.js
+// $ node src/workflows/homefeed-lurker.js --recordID=RECORD_ID
 const puppeteer = require("puppeteer-extra");
 const fs = require("fs");
 const axios = require("axios");
 const chromium = require("@sparticuz/chromium");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const yargs = require("yargs/yargs");
+const { hideBin } = require("yargs/helpers");
+
 const {
   retrieveFromAirtable,
   saveCookiesToAirtable,
 } = require("../api/airtable");
+const { loggingWebhook } = require("../api/logging");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -20,8 +24,6 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const RecaptchaPlugin = require("puppeteer-extra-plugin-recaptcha");
 const { scrollPageToBottom } = require("puppeteer-autoscroll-down");
 const { createCursor } = require("ghost-cursor");
-
-const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
 
 // Use stealth
 puppeteer.use(StealthPlugin());
@@ -44,7 +46,7 @@ const run = async ({ isCloud, inputArgs }) => {
   const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
   const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
     profile.proxy.split(":");
-  const profileCookies = JSON.parse(profile.cookies);
+  const profileCookies = profile.cookies;
   const p = new Promise(async (res, rej) => {
     // Launch pupputeer-stealth
     const config = {
@@ -101,7 +103,7 @@ const run = async ({ isCloud, inputArgs }) => {
       };
       await setupCookies();
       // Go to the website
-      await page.goto(url);
+      await page.goto(url, { timeout: 60000 });
       await page.waitForTimeout(2000);
       // login if needed
       const loginFlow = async () => {
@@ -118,6 +120,15 @@ const run = async ({ isCloud, inputArgs }) => {
         await page.waitForTimeout(500);
         await page.keyboard.press("Enter");
         await page.waitForTimeout(10000);
+        const updateCookies = async () => {
+          await page.waitForTimeout(2000);
+          const updatedCookies = await page.cookies();
+          await saveCookiesToAirtable({
+            recordID: inputArgs.recordID,
+            cookiesArray: updatedCookies,
+          });
+        };
+        await updateCookies();
       };
       if (!alreadyLoggedIn) {
         await loginFlow();
@@ -140,13 +151,7 @@ const run = async ({ isCloud, inputArgs }) => {
       let browsedUntilIndex = 0;
       await page.waitForSelector(`div[data-scroller-first]`);
       const links = await page.$$(`div[data-scroller-first] ~ div`);
-      await page.evaluate(
-        ({ links }) => {
-          console.log("links", links);
-        },
-        { links }
-      );
-      console.log(links);
+
       const lurkPost = async (nextLink) => {
         await cursor.click(nextLink);
         await page.waitForTimeout(2000);
@@ -232,33 +237,35 @@ const run = async ({ isCloud, inputArgs }) => {
         lurkedPagesCount++;
       }
 
-      const updateCookies = async () => {
-        await page.waitForTimeout(2000);
-        const updatedCookies = await page.cookies();
-        await saveCookiesToAirtable({
-          recordID: inputArgs.recordID,
-          cookiesArray: updatedCookies,
-        });
-      };
-      await updateCookies();
       await browser.close();
       res();
     });
   });
   return p;
 };
+
 // run locally
-// run({
-//   isCloud: false,
-//   inputArgs: {
-//     recordID: "recl9EyGvU4ASC1V0",
-//   },
-// });
+const runLocally = async () => {
+  const argv = yargs(hideBin(process.argv)).option("recordID", {
+    alias: "r",
+    describe: "The ID of the record",
+    type: "string",
+    demandOption: true, // This makes it required
+  }).argv;
+  console.log("Record ID:", argv.recordID);
+  await run({
+    isCloud: false,
+    inputArgs: {
+      recordID: argv.recordID,
+    },
+  });
+};
+runLocally();
 
 // run in the cloud
 exports.handler = async (event) => {
   console.log(`Starting homefeed-lurker.js workflow`);
-  console.log(`Received event: ${JSON.stringify(event)}`);
+
   // Parse the JSON body from the event
   let body;
   try {
@@ -277,6 +284,6 @@ exports.handler = async (event) => {
     console.log(`No Airtable recordID found, aborting...`);
     return;
   }
-  console.log(`Got input args:`, inputArgs);
+
   await run({ isCloud: true, inputArgs });
 };

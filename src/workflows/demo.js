@@ -8,6 +8,7 @@ const {
   retrieveFromAirtable,
   saveCookiesToAirtable,
 } = require("../api/airtable");
+const { loggingWebhook } = require("../api/logging");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -19,8 +20,6 @@ const model = genAI.getGenerativeModel({ model: "gemini-pro" });
 const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const RecaptchaPlugin = require("puppeteer-extra-plugin-recaptcha");
 const { createCursor } = require("ghost-cursor");
-
-const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
 
 // Use stealth
 puppeteer.use(StealthPlugin());
@@ -36,7 +35,8 @@ const run = async ({ isCloud, inputArgs }) => {
   const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
   const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
     profile.proxy.split(":");
-  const profileCookies = JSON.parse(profile.cookies);
+  console.log("typeof profile.cookies", typeof profile.cookies);
+  const profileCookies = profile.cookies;
   const p = new Promise(async (res, rej) => {
     const config = {
       headless: isCloud,
@@ -91,6 +91,7 @@ const run = async ({ isCloud, inputArgs }) => {
       await page.waitForTimeout(5000);
 
       // log it
+      console.log(`Logging this event... ${loggingWebhook}`);
       const page_url = page.url();
       const logPayload = {
         username: profile.username,
@@ -123,14 +124,13 @@ const run = async ({ isCloud, inputArgs }) => {
 // run({
 //   isCloud: false,
 //   inputArgs: {
-//     recordID: "recl9EyGvU4ASC1V0",
+//     recordID: "recDpl9Jwzc9jIzga",
 //   },
 // });
 
 // run in the cloud
 exports.handler = async (event) => {
   console.log(`Starting demo.js workflow`);
-  console.log(`Received event: ${JSON.stringify(event)}`);
   // Parse the JSON body from the event
   let body;
   try {
@@ -149,6 +149,5 @@ exports.handler = async (event) => {
     console.log(`No Airtable recordID found, aborting...`);
     return;
   }
-  console.log(`Got input args:`, inputArgs);
   await run({ isCloud: true, inputArgs });
 };

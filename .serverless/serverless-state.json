@@ -198,7 +198,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/reddit-autobots/dev/1706655326726-2024-01-30T22:55:26.726Z/reddit-autobots.zip"
+                "S3Key": "serverless/reddit-autobots/dev/1706684758261-2024-01-31T07:05:58.261Z/reddit-autobots.zip"
               },
               "Handler": "src/workflows/demo.handler",
               "Runtime": "nodejs18.x",
@@ -223,7 +223,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/reddit-autobots/dev/1706655326726-2024-01-30T22:55:26.726Z/reddit-autobots.zip"
+                "S3Key": "serverless/reddit-autobots/dev/1706684758261-2024-01-31T07:05:58.261Z/reddit-autobots.zip"
               },
               "Handler": "src/workflows/homefeed-lurker.handler",
               "Runtime": "nodejs18.x",
@@ -248,7 +248,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/reddit-autobots/dev/1706655326726-2024-01-30T22:55:26.726Z/reddit-autobots.zip"
+                "S3Key": "serverless/reddit-autobots/dev/1706684758261-2024-01-31T07:05:58.261Z/reddit-autobots.zip"
               },
               "Handler": "src/workflows/homefeed-commenter.handler",
               "Runtime": "nodejs18.x",
@@ -273,7 +273,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/reddit-autobots/dev/1706655326726-2024-01-30T22:55:26.726Z/reddit-autobots.zip"
+                "S3Key": "serverless/reddit-autobots/dev/1706684758261-2024-01-31T07:05:58.261Z/reddit-autobots.zip"
               },
               "Handler": "src/workflows/post-commenter.handler",
               "Runtime": "nodejs18.x",
@@ -298,7 +298,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/reddit-autobots/dev/1706655326726-2024-01-30T22:55:26.726Z/reddit-autobots.zip"
+                "S3Key": "serverless/reddit-autobots/dev/1706684758261-2024-01-31T07:05:58.261Z/reddit-autobots.zip"
               },
               "Handler": "src/workflows/subreddits-follow.handler",
               "Runtime": "nodejs18.x",
@@ -316,54 +316,54 @@
               "SubredditsFollowLogGroup"
             ]
           },
-          "DemoPuppeteerLambdaVersionMizIOg9s2LQALuAmjqPnN6k2Baa0ii4JbJa1K4BI0w": {
+          "DemoPuppeteerLambdaVersionRSwLsZfayxjvGxv0qGExpZ7b6SxveanqvADO0TksGQ": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "DemoPuppeteerLambdaFunction"
               },
-              "CodeSha256": "mrH185m1wb/cBuBXmD0H88v6i5TwCkI2buy0DW9ZLo4="
+              "CodeSha256": "exp1V5azIFr94VdC/NiA8+soImEIfNKZSk853qX5INc="
             }
           },
-          "FeedLurkerLambdaVersionFAs6whg4gPsyE06qo6YkBRuRbD0CE222ZToKxbCaAog": {
+          "FeedLurkerLambdaVersionbf2gXh5nrbv7OZG3j2edO18WhuVpg0NbIpBCbvxXhlw": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "FeedLurkerLambdaFunction"
               },
-              "CodeSha256": "mrH185m1wb/cBuBXmD0H88v6i5TwCkI2buy0DW9ZLo4="
+              "CodeSha256": "exp1V5azIFr94VdC/NiA8+soImEIfNKZSk853qX5INc="
             }
           },
-          "FeedCommenterLambdaVersionDIEjbttHwJw4PwSOg49EfPqxlBT4VIEHdhQDBQhm4Q": {
+          "FeedCommenterLambdaVersion1rheX9PNslnN8nqlOm4mYo40mRNUctfgOEqPXOH480": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "FeedCommenterLambdaFunction"
               },
-              "CodeSha256": "mrH185m1wb/cBuBXmD0H88v6i5TwCkI2buy0DW9ZLo4="
+              "CodeSha256": "exp1V5azIFr94VdC/NiA8+soImEIfNKZSk853qX5INc="
             }
           },
-          "PostCommenterLambdaVersionEZp5PRMtuoYPjrB3ze4rT5TMjua0PzngLm745R18": {
+          "PostCommenterLambdaVersionTLb8SS1lupxtXYWu5y0puDj4U8iOIzJLZWxF8C5gc": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "PostCommenterLambdaFunction"
               },
-              "CodeSha256": "mrH185m1wb/cBuBXmD0H88v6i5TwCkI2buy0DW9ZLo4="
+              "CodeSha256": "exp1V5azIFr94VdC/NiA8+soImEIfNKZSk853qX5INc="
             }
           },
-          "SubredditsFollowLambdaVersionjCGO95x8q8PpRDgqNVsRNEaEd2nMCedVyoqYOQSA8": {
+          "SubredditsFollowLambdaVersionVTisb1i9KTR4X9UJo60r3fYEoVdlcwSIplV4X1zfs": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "SubredditsFollowLambdaFunction"
               },
-              "CodeSha256": "mrH185m1wb/cBuBXmD0H88v6i5TwCkI2buy0DW9ZLo4="
+              "CodeSha256": "exp1V5azIFr94VdC/NiA8+soImEIfNKZSk853qX5INc="
             }
           }
         },
@@ -379,7 +379,7 @@
           "DemoPuppeteerLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "DemoPuppeteerLambdaVersionMizIOg9s2LQALuAmjqPnN6k2Baa0ii4JbJa1K4BI0w"
+              "Ref": "DemoPuppeteerLambdaVersionRSwLsZfayxjvGxv0qGExpZ7b6SxveanqvADO0TksGQ"
             },
             "Export": {
               "Name": "sls-reddit-autobots-dev-DemoPuppeteerLambdaFunctionQualifiedArn"
@@ -388,7 +388,7 @@
           "FeedLurkerLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "FeedLurkerLambdaVersionFAs6whg4gPsyE06qo6YkBRuRbD0CE222ZToKxbCaAog"
+              "Ref": "FeedLurkerLambdaVersionbf2gXh5nrbv7OZG3j2edO18WhuVpg0NbIpBCbvxXhlw"
             },
             "Export": {
               "Name": "sls-reddit-autobots-dev-FeedLurkerLambdaFunctionQualifiedArn"
@@ -397,7 +397,7 @@
           "FeedCommenterLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "FeedCommenterLambdaVersionDIEjbttHwJw4PwSOg49EfPqxlBT4VIEHdhQDBQhm4Q"
+              "Ref": "FeedCommenterLambdaVersion1rheX9PNslnN8nqlOm4mYo40mRNUctfgOEqPXOH480"
             },
             "Export": {
               "Name": "sls-reddit-autobots-dev-FeedCommenterLambdaFunctionQualifiedArn"
@@ -406,7 +406,7 @@
           "PostCommenterLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "PostCommenterLambdaVersionEZp5PRMtuoYPjrB3ze4rT5TMjua0PzngLm745R18"
+              "Ref": "PostCommenterLambdaVersionTLb8SS1lupxtXYWu5y0puDj4U8iOIzJLZWxF8C5gc"
             },
             "Export": {
               "Name": "sls-reddit-autobots-dev-PostCommenterLambdaFunctionQualifiedArn"
@@ -415,7 +415,7 @@
           "SubredditsFollowLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "SubredditsFollowLambdaVersionjCGO95x8q8PpRDgqNVsRNEaEd2nMCedVyoqYOQSA8"
+              "Ref": "SubredditsFollowLambdaVersionVTisb1i9KTR4X9UJo60r3fYEoVdlcwSIplV4X1zfs"
             },
             "Export": {
               "Name": "sls-reddit-autobots-dev-SubredditsFollowLambdaFunctionQualifiedArn"
@@ -518,7 +518,7 @@
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "DemoPuppeteerLambdaVersionMizIOg9s2LQALuAmjqPnN6k2Baa0ii4JbJa1K4BI0w"
+        "versionLogicalId": "DemoPuppeteerLambdaVersionRSwLsZfayxjvGxv0qGExpZ7b6SxveanqvADO0TksGQ"
       },
       "feedLurker": {
         "handler": "src/workflows/homefeed-lurker.handler",
@@ -529,7 +529,7 @@
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "FeedLurkerLambdaVersionFAs6whg4gPsyE06qo6YkBRuRbD0CE222ZToKxbCaAog"
+        "versionLogicalId": "FeedLurkerLambdaVersionbf2gXh5nrbv7OZG3j2edO18WhuVpg0NbIpBCbvxXhlw"
       },
       "feedCommenter": {
         "handler": "src/workflows/homefeed-commenter.handler",
@@ -540,7 +540,7 @@
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "FeedCommenterLambdaVersionDIEjbttHwJw4PwSOg49EfPqxlBT4VIEHdhQDBQhm4Q"
+        "versionLogicalId": "FeedCommenterLambdaVersion1rheX9PNslnN8nqlOm4mYo40mRNUctfgOEqPXOH480"
       },
       "postCommenter": {
         "handler": "src/workflows/post-commenter.handler",
@@ -551,7 +551,7 @@
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "PostCommenterLambdaVersionEZp5PRMtuoYPjrB3ze4rT5TMjua0PzngLm745R18"
+        "versionLogicalId": "PostCommenterLambdaVersionTLb8SS1lupxtXYWu5y0puDj4U8iOIzJLZWxF8C5gc"
       },
       "subredditsFollow": {
         "handler": "src/workflows/subreddits-follow.handler",
@@ -562,7 +562,7 @@
         "memory": 1024,
         "runtime": "nodejs18.x",
         "vpc": {},
-        "versionLogicalId": "SubredditsFollowLambdaVersionjCGO95x8q8PpRDgqNVsRNEaEd2nMCedVyoqYOQSA8"
+        "versionLogicalId": "SubredditsFollowLambdaVersionVTisb1i9KTR4X9UJo60r3fYEoVdlcwSIplV4X1zfs"
       }
     },
     "configValidationMode": "warn",
@@ -581,7 +581,7 @@
     "artifact": "/Users/kangzeroo/Projects/Puppeteer-Sandbox/reddit-automation/.serverless/reddit-autobots.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/reddit-autobots/dev/1706655326726-2024-01-30T22:55:26.726Z",
+    "artifactDirectoryName": "serverless/reddit-autobots/dev/1706684758261-2024-01-31T07:05:58.261Z",
     "artifact": "reddit-autobots.zip"
   }
 }

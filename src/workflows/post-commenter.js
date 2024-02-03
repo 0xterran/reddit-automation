@@ -8,6 +8,7 @@ const {
   retrieveFromAirtable,
   saveCookiesToAirtable,
 } = require("../api/airtable");
+const { loggingWebhook } = require("../api/logging");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -21,8 +22,6 @@ const RecaptchaPlugin = require("puppeteer-extra-plugin-recaptcha");
 const { scrollPageToBottom } = require("puppeteer-autoscroll-down");
 const { createCursor } = require("ghost-cursor");
 
-const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
-
 // Use stealth
 puppeteer.use(StealthPlugin());
 
@@ -33,18 +32,11 @@ puppeteer.use(
   })
 );
 
-function matchesSubRedditPattern(href) {
-  const pattern = /\/r\/[^\/]+\/comments\/[^\/]+/;
-  const match = pattern.test(href);
-  console.log(`Found match = ${match} for ${href}`);
-  return match;
-}
-
 const run = async ({ isCloud, inputArgs }) => {
   const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
   const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
     profile.proxy.split(":");
-  const profileCookies = JSON.parse(profile.cookies);
+  const profileCookies = profile.cookies;
   const p = new Promise(async (res, rej) => {
     // Launch pupputeer-stealth
     const config = {
@@ -68,8 +60,7 @@ const run = async ({ isCloud, inputArgs }) => {
         password: proxyPassword,
       });
 
-      const url =
-        "https://www.reddit.com/r/InstagramMarketing/comments/1ae635m/anyone_experiencing_very_poor_engagementviews/";
+      const url = inputArgs.url;
       // allow clipboard access
       const context = browser.defaultBrowserContext();
       await context.overridePermissions(url, [
@@ -265,9 +256,9 @@ const run = async ({ isCloud, inputArgs }) => {
             }
           });
         }, profile.username);
-        return { permalink, generatedComment };
+        return { permalink, generatedComment, title };
       };
-      const { permalink, generatedComment } = await postComment();
+      const { permalink, generatedComment, title } = await postComment();
 
       console.log(
         `Commented! Heres the permalink to the comment: ${permalink}`
@@ -278,6 +269,7 @@ const run = async ({ isCloud, inputArgs }) => {
         action: "comment_post",
         comment: generatedComment,
         permalink: permalink,
+        title,
         timestamp: new Date().toISOString(),
       };
 
@@ -307,13 +299,14 @@ const run = async ({ isCloud, inputArgs }) => {
 //   isCloud: false,
 //   inputArgs: {
 //     recordID: "recl9EyGvU4ASC1V0",
+//     url: "https://www.reddit.com/r/InstagramMarketing/comments/1ae635m/anyone_experiencing_very_poor_engagementviews/"
 //   },
 // });
 
 // run in the cloud
 exports.handler = async (event) => {
   console.log(`Starting post-commenter.js workflow`);
-  console.log(`Received event: ${JSON.stringify(event)}`);
+
   // Parse the JSON body from the event
   let body;
   try {
@@ -327,11 +320,12 @@ exports.handler = async (event) => {
   // Access the arguments
   const inputArgs = {
     recordID: body.recordID || "",
+    url: body.url || "",
   };
   if (!inputArgs.recordID) {
     console.log(`No Airtable recordID found, aborting...`);
     return;
   }
-  console.log(`Got input args:`, inputArgs);
+
   await run({ isCloud: true, inputArgs });
 };

@@ -8,6 +8,9 @@ const {
   retrieveFromAirtable,
   saveCookiesToAirtable,
 } = require("../api/airtable");
+const { loggingWebhook } = require("../api/logging");
+const yargs = require("yargs/yargs");
+const { hideBin } = require("yargs/helpers");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -20,8 +23,6 @@ const StealthPlugin = require("puppeteer-extra-plugin-stealth");
 const RecaptchaPlugin = require("puppeteer-extra-plugin-recaptcha");
 const { scrollPageToBottom } = require("puppeteer-autoscroll-down");
 const { createCursor } = require("ghost-cursor");
-
-const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
 
 // Use stealth
 puppeteer.use(StealthPlugin());
@@ -44,7 +45,7 @@ const run = async ({ isCloud, inputArgs }) => {
   const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
   const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
     profile.proxy.split(":");
-  const profileCookies = JSON.parse(profile.cookies);
+  const profileCookies = profile.cookies;
   const p = new Promise(async (res, rej) => {
     // Launch pupputeer-stealth
     const config = {
@@ -109,7 +110,7 @@ const run = async ({ isCloud, inputArgs }) => {
       await toggleJSConsole();
 
       // Go to the website
-      await page.goto(url);
+      await page.goto(url, { timeout: 60000 });
 
       await page.waitForTimeout(3000);
 
@@ -134,6 +135,15 @@ const run = async ({ isCloud, inputArgs }) => {
         await page.waitForTimeout(500);
         await page.keyboard.press("Enter");
         await page.waitForTimeout(10000);
+        const updateCookies = async () => {
+          await page.waitForTimeout(2000);
+          const updatedCookies = await page.cookies();
+          await saveCookiesToAirtable({
+            recordID: inputArgs.recordID,
+            cookiesArray: updatedCookies,
+          });
+        };
+        await updateCookies();
       };
       if (!alreadyLoggedIn) {
         await loginFlow();
@@ -354,9 +364,10 @@ const run = async ({ isCloud, inputArgs }) => {
             }
           });
         }, profile.username);
-        return { permalink, generatedComment };
+        return { permalink, generatedComment, title };
       };
-      const { permalink, generatedComment } = await readScrollCommentPost();
+      const { permalink, generatedComment, title } =
+        await readScrollCommentPost();
 
       console.log(
         `Commented! Heres the permalink to the comment: ${permalink}`
@@ -367,6 +378,7 @@ const run = async ({ isCloud, inputArgs }) => {
         action: "comment_post",
         comment: generatedComment,
         permalink: permalink,
+        title,
         timestamp: new Date().toISOString(),
       };
 
@@ -379,16 +391,6 @@ const run = async ({ isCloud, inputArgs }) => {
       // Wait for security check
       await page.waitForTimeout(2000);
       await page.goBack();
-
-      const updateCookies = async () => {
-        await page.waitForTimeout(2000);
-        const updatedCookies = await page.cookies();
-        await saveCookiesToAirtable({
-          recordID: inputArgs.recordID,
-          cookiesArray: updatedCookies,
-        });
-      };
-      await updateCookies();
 
       // Evaluate script in the context of the page
       // Outputs to browser js console
@@ -439,17 +441,27 @@ const run = async ({ isCloud, inputArgs }) => {
   return p;
 };
 // run locally
-// run({
-//   isCloud: false,
-//   inputArgs: {
-//     recordID: "recl9EyGvU4ASC1V0",
-//   },
-// });
+const runLocally = async () => {
+  const argv = yargs(hideBin(process.argv)).option("recordID", {
+    alias: "r",
+    describe: "The ID of the record",
+    type: "string",
+    demandOption: true, // This makes it required
+  }).argv;
+  console.log("Record ID:", argv.recordID);
+  run({
+    isCloud: false,
+    inputArgs: {
+      recordID: argv.recordID,
+    },
+  });
+};
+runLocally();
 
 // run in the cloud
 exports.handler = async (event) => {
   console.log(`Starting homefeed-commenter.js workflow`);
-  console.log(`Received event: ${JSON.stringify(event)}`);
+
   // Parse the JSON body from the event
   let body;
   try {
@@ -468,6 +480,6 @@ exports.handler = async (event) => {
     console.log(`No Airtable recordID found, aborting...`);
     return;
   }
-  console.log(`Got input args:`, inputArgs);
+
   await run({ isCloud: true, inputArgs });
 };

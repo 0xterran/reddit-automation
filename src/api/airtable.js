@@ -1,6 +1,9 @@
+const axios = require("axios");
+
 async function retrieveFromAirtable({ recordID }) {
   try {
-    const url = "https://eoa61wmdwrqdqr8.m.pipedream.net";
+    const url =
+      "https://app.legions.bot/webhook/02fc08e1-60bc-4a8a-b405-b6b0b592c04d";
     const postData = {
       recordID,
     };
@@ -25,7 +28,8 @@ async function retrieveFromAirtable({ recordID }) {
 async function saveCookiesToAirtable({ recordID, cookiesArray }) {
   const cookiesString = JSON.stringify(cookiesArray);
   try {
-    const url = "https://eo2ntnugkt4dwlj.m.pipedream.net";
+    const url =
+      "https://app.legions.bot/webhook/e60fec3f-81d0-4aa2-892f-a8a5b7c82f38";
     const postData = {
       recordID,
       cookiesString,

@@ -8,6 +8,7 @@ const {
   retrieveFromAirtable,
   saveCookiesToAirtable,
 } = require("../api/airtable");
+const { loggingWebhook } = require("../api/logging");
 
 const gemini_api_key = "AIzaSyA5583wx8Oc2UDCvvRPEBFS6AWjmGLadI4";
 
@@ -21,8 +22,6 @@ const RecaptchaPlugin = require("puppeteer-extra-plugin-recaptcha");
 const { scrollPageToBottom } = require("puppeteer-autoscroll-down");
 const { createCursor } = require("ghost-cursor");
 
-const loggingWebhook = "https://eonm736j22q5lgz.m.pipedream.net";
-
 // Use stealth
 puppeteer.use(StealthPlugin());
 
@@ -33,18 +32,11 @@ puppeteer.use(
   })
 );
 
-function matchesSubRedditPattern(href) {
-  const pattern = /\/r\/[^\/]+\/comments\/[^\/]+/;
-  const match = pattern.test(href);
-  console.log(`Found match = ${match} for ${href}`);
-  return match;
-}
-
 const run = async ({ isCloud, inputArgs }) => {
   const profile = await retrieveFromAirtable({ recordID: inputArgs.recordID });
   const [proxyServer, proxyPort, proxyUsername, proxyPassword] =
     profile.proxy.split(":");
-  const profileCookies = JSON.parse(profile.cookies);
+  const profileCookies = profile.cookies;
   const p = new Promise(async (res, rej) => {
     // Launch pupputeer-stealth
     const config = {
@@ -68,10 +60,7 @@ const run = async ({ isCloud, inputArgs }) => {
         password: proxyPassword,
       });
 
-      const urls = [
-        "https://www.reddit.com/r/webdev/",
-        "https://www.reddit.com/r/everymanshouldknow/",
-      ];
+      const urls = inputArgs.urls;
       // allow clipboard access
       const context = browser.defaultBrowserContext();
       await context.overridePermissions(urls[0], [
@@ -130,7 +119,7 @@ const run = async ({ isCloud, inputArgs }) => {
           "//button[contains(text(), 'Join')][@role='button']";
         await page.waitForXPath(buttonXPath);
         const joinButtons = await page.$x(buttonXPath);
-        console.log("Found join buttons: ", joinButtons);
+
         for (let joinButton of joinButtons) {
           const buttonText = await joinButton.evaluate((el) => el.textContent);
           console.log("Button text:", buttonText);
@@ -177,13 +166,17 @@ const run = async ({ isCloud, inputArgs }) => {
 //   isCloud: false,
 //   inputArgs: {
 //     recordID: "recl9EyGvU4ASC1V0",
+//     urls: [
+//       "https://www.reddit.com/r/webdev/",
+//       "https://www.reddit.com/r/everymanshouldknow/",
+//     ],
 //   },
 // });
 
 // run in the cloud
 exports.handler = async (event) => {
   console.log(`Starting subreddits-follow.js workflow`);
-  console.log(`Received event: ${JSON.stringify(event)}`);
+
   // Parse the JSON body from the event
   let body;
   try {
@@ -197,11 +190,15 @@ exports.handler = async (event) => {
   // Access the arguments
   const inputArgs = {
     recordID: body.recordID || "",
+    urls: [
+      "https://www.reddit.com/r/webdev/",
+      "https://www.reddit.com/r/everymanshouldknow/",
+    ],
   };
   if (!inputArgs.recordID) {
     console.log(`No Airtable recordID found, aborting...`);
     return;
   }
-  console.log(`Got input args:`, inputArgs);
+
   await run({ isCloud: true, inputArgs });
 };
